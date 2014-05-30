@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
+using System.Collections.Specialized;
+using System.Text;
 using AllureCSharpCommons;
 using AllureCSharpCommons.Events;
-using AllureCSharpCommons.Exceptions;
+using log4net;
 using NUnit.Core;
+using NUnit.Framework;
 
 namespace NUnitAllureAdapter
 {
@@ -12,67 +13,64 @@ namespace NUnitAllureAdapter
     {
         private readonly Allure _lifecycle = Allure.Lifecycle;
         
-        private readonly Dictionary<string, string> _suiteStorage = 
-            new Dictionary<string, string>();
+        private static readonly OrderedDictionary SuiteStorage =
+            new OrderedDictionary();
 
-        private readonly FileInfo _file = new FileInfo("out.txt");
+        private StringBuilder _stdOut = new StringBuilder();
+        private StringBuilder _trace = new StringBuilder();
+        private StringBuilder _log = new StringBuilder();
+        private StringBuilder _stdErr = new StringBuilder();
 
-        private void Write(string text)
-        {
-            StreamWriter sw = _file.AppendText();
-            sw.WriteLine(text);
-            sw.Close();
-        }
-
+        private readonly static ILog Log = LogManager.GetLogger(typeof(Allure));
+        
         public void RunStarted(string name, int testCount)
         {
-            Write("Run Started");
         }
 
         public void RunFinished(TestResult result)
         {
-            Write("Run Finished result");
         }
 
         public void RunFinished(Exception exception)
         {
-            Write("Run Finished exception");
         }
 
         public void TestStarted(TestName testName)
         {
-            Write("Test Started");
+            _lifecycle.Fire(new TestCaseStartedEvent((string) SuiteStorage[SuiteStorage.Count - 1], testName.FullName));
         }
 
         public void TestFinished(TestResult result)
         {
-            Write("Test Finished");
+            if (result.IsError)
+            {
+                _lifecycle.Fire(new TestCaseFailureEvent());
+            }
+            else if (result.IsFailure)
+            {
+                AssertionException ex = new AssertionException(result.Message);
+                _lifecycle.Fire(new TestCaseFailureEvent{Throwable = ex});
+            }
+            else if (!result.Executed)
+            {
+                _lifecycle.Fire(new TestCasePendingEvent());
+            }
+            WriteOutputToAttachment();
+            _lifecycle.Fire(new TestCaseFinishedEvent());
         }
 
         public void SuiteStarted(TestName testName)
         {
-            Write("Suite Started");
             var suiteUid = Guid.NewGuid().ToString();
-            _suiteStorage.Add(testName.FullName, suiteUid);
+            SuiteStorage.Add(testName.FullName, suiteUid);
 
-            TestSuiteStartedEvent evt =
-                new TestSuiteStartedEvent(suiteUid, testName.FullName);
-
-            _lifecycle.Fire(evt);
+            _lifecycle.Fire(new TestSuiteStartedEvent(suiteUid, testName.FullName));
         }
 
         public void SuiteFinished(TestResult result)
         {
-            Write("Suite Finished");
-            if (!_suiteStorage.ContainsKey(result.FullName))
-            {
-                throw new AllureException("");
-            }
-
-            TestSuiteFinishedEvent evt =
-                new TestSuiteFinishedEvent(_suiteStorage[result.FullName]);
-
-            _lifecycle.Fire(evt);
+            _lifecycle.Fire(new TestSuiteFinishedEvent((string) SuiteStorage[result.FullName]));
+            SuiteStorage.Remove(result.FullName);
         }
 
         public void UnhandledException(Exception exception)
@@ -81,6 +79,50 @@ namespace NUnitAllureAdapter
 
         public void TestOutput(TestOutput testOutput)
         {
+            switch (testOutput.Type)
+            {
+                case TestOutputType.Out:
+                    _stdOut.Append(testOutput.Text);
+                    break;
+                case TestOutputType.Trace:
+                    _trace.Append(testOutput.Text);
+                    break;
+                case TestOutputType.Log:
+                    _log.Append(testOutput.Text);
+                    break;
+                case TestOutputType.Error:
+                    _stdErr.Append(testOutput.Text);
+                    break;
+            }
         }
+
+        private void WriteOutputToAttachment()
+        {
+            if (_stdOut.Length > 0)
+            {
+                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_stdOut.ToString()), "StdOut", "text/plain"));
+            }
+            if (_trace.Length > 0)
+            {
+                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_trace.ToString()), "Trace", "text/plain"));
+            }
+            if (_log.Length > 0)
+            {
+                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_log.ToString()), "Log", "text/plain"));
+            }
+            if (_stdErr.Length > 0)
+            {
+                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_stdErr.ToString()), "StdErr", "text/plain"));
+            }
+            _stdOut = new StringBuilder();
+            _trace = new StringBuilder();
+            _log = new StringBuilder();
+            _stdErr = new StringBuilder();
+        }
+    }
+
+    internal class TestSuite
+    {
+        
     }
 }

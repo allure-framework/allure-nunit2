@@ -34,6 +34,10 @@
     <Reference Include="AllureCSharpCommons">
       <HintPath>..\..\AllureCSharpCommons\AllureCSharpCommons\bin\Debug\AllureCSharpCommons.dll</HintPath>
     </Reference>
+    <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\AllureCSharpCommons\AllureCSharpCommons\bin\Debug\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="nunit.core, Version=2.6.3.13283, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NUnit.Runners.2.6.3\tools\lib\nunit.core.dll</HintPath>

@@ -1,4 +1,5 @@
-﻿using NUnit.Core;
+﻿using System;
+using NUnit.Core;
 using NUnit.Framework;
 
 namespace NUnitAllureAdapter
@@ -12,9 +13,10 @@ namespace NUnitAllureAdapter
         }
 
         [Test]
+        [Ignore]
         public void Test1()
         {
-            
+            throw new AssertionException("1");
         }
 
         [TestCase("s")]
@@ -22,7 +24,7 @@ namespace NUnitAllureAdapter
         [TestCase("g")]
         public void Test2(string s)
         {
-
+            throw new Exception();
         }
     }
 }
