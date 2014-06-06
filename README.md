@@ -1,0 +1,2 @@
+NUnitAllureAdapter
+==================
