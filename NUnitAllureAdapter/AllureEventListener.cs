@@ -1,53 +1,74 @@
 ﻿using System;
+using System.IO;
 using NUnit.Core;
 
 namespace NUnitAllureAdapter
 {
-    internal class AllureEventListener : EventListener
+    public class AllureEventListener : EventListener
     {
+        private void Write()
+        {
+            StreamWriter streamWriter = null;
+            try
+            {
+                string xmlString = "42\n";
+                var xmlFile = new FileInfo("out.txt");
+                streamWriter = xmlFile.CreateText();
+                streamWriter.WriteLine(xmlString);
+                streamWriter.Close();
+            }
+            finally
+            {
+                if ((streamWriter != null))
+                {
+                    streamWriter.Dispose();
+                }
+            }
+        }
+
         public void RunStarted(string name, int testCount)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void RunFinished(TestResult result)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void RunFinished(Exception exception)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void TestStarted(TestName testName)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void TestFinished(TestResult result)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void SuiteStarted(TestName testName)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void SuiteFinished(TestResult result)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void UnhandledException(Exception exception)
         {
-            throw new NotImplementedException();
+            Write();
         }
 
         public void TestOutput(TestOutput testOutput)
         {
-            throw new NotImplementedException();
+            Write();
         }
     }
 }
