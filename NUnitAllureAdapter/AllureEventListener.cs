@@ -1,74 +1,86 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using AllureCSharpCommons;
+using AllureCSharpCommons.Events;
+using AllureCSharpCommons.Exceptions;
 using NUnit.Core;
 
 namespace NUnitAllureAdapter
 {
     public class AllureEventListener : EventListener
     {
-        private void Write()
+        private readonly Allure _lifecycle = Allure.Lifecycle;
+        
+        private readonly Dictionary<string, string> _suiteStorage = 
+            new Dictionary<string, string>();
+
+        private readonly FileInfo _file = new FileInfo("out.txt");
+
+        private void Write(string text)
         {
-            StreamWriter streamWriter = null;
-            try
-            {
-                string xmlString = "42\n";
-                var xmlFile = new FileInfo("out.txt");
-                streamWriter = xmlFile.CreateText();
-                streamWriter.WriteLine(xmlString);
-                streamWriter.Close();
-            }
-            finally
-            {
-                if ((streamWriter != null))
-                {
-                    streamWriter.Dispose();
-                }
-            }
+            StreamWriter sw = _file.AppendText();
+            sw.WriteLine(text);
+            sw.Close();
         }
 
         public void RunStarted(string name, int testCount)
         {
-            Write();
+            Write("Run Started");
         }
 
         public void RunFinished(TestResult result)
         {
-            Write();
+            Write("Run Finished result");
         }
 
         public void RunFinished(Exception exception)
         {
-            Write();
+            Write("Run Finished exception");
         }
 
         public void TestStarted(TestName testName)
         {
-            Write();
+            Write("Test Started");
         }
 
         public void TestFinished(TestResult result)
         {
-            Write();
+            Write("Test Finished");
         }
 
         public void SuiteStarted(TestName testName)
         {
-            Write();
+            Write("Suite Started");
+            var suiteUid = Guid.NewGuid().ToString();
+            _suiteStorage.Add(testName.FullName, suiteUid);
+
+            TestSuiteStartedEvent evt =
+                new TestSuiteStartedEvent(suiteUid, testName.FullName);
+
+            _lifecycle.Fire(evt);
         }
 
         public void SuiteFinished(TestResult result)
         {
-            Write();
+            Write("Suite Finished");
+            if (!_suiteStorage.ContainsKey(result.FullName))
+            {
+                throw new AllureException("");
+            }
+
+            TestSuiteFinishedEvent evt =
+                new TestSuiteFinishedEvent(_suiteStorage[result.FullName]);
+
+            _lifecycle.Fire(evt);
         }
 
         public void UnhandledException(Exception exception)
         {
-            Write();
         }
 
         public void TestOutput(TestOutput testOutput)
         {
-            Write();
         }
     }
 }
