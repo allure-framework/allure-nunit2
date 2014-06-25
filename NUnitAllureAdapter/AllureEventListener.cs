@@ -48,8 +48,13 @@ namespace NUnitAllureAdapter
             }
             else if (result.IsFailure)
             {
-                AssertionException ex = new AssertionException(result.Message);
-                _lifecycle.Fire(new TestCaseFailureEvent{Throwable = ex});
+                Log.Info(result.StackTrace);
+                _lifecycle.Fire(new TestCaseFailureEvent
+                {
+                    Throwable = new AssertionException(result.Message),
+                    StackTrace = result.StackTrace
+                });
+                Log.Info(result.StackTrace);
             }
             else if (!result.Executed)
             {

@@ -13,7 +13,6 @@ namespace NUnitAllureAdapter
         }
 
         [Test]
-        [Ignore]
         public void Test1()
         {
             throw new AssertionException("1");
