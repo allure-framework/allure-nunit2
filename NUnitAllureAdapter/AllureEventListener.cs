@@ -48,17 +48,30 @@ namespace NUnitAllureAdapter
             }
             else if (result.IsFailure)
             {
-                Log.Info(result.StackTrace);
                 _lifecycle.Fire(new TestCaseFailureEvent
                 {
                     Throwable = new AssertionException(result.Message),
                     StackTrace = result.StackTrace
                 });
-                Log.Info(result.StackTrace);
             }
             else if (!result.Executed)
             {
-                _lifecycle.Fire(new TestCasePendingEvent());
+                if (result.ResultState == ResultState.Cancelled)
+                {
+                    _lifecycle.Fire(new TestCaseCanceledEvent
+                    {
+                        Throwable = new Exception(result.Message),
+                        StackTrace = result.StackTrace
+                    });
+                }
+                else
+                {
+                    _lifecycle.Fire(new TestCasePendingEvent
+                    {
+                        Throwable = new Exception(result.Message),
+                        StackTrace = result.StackTrace
+                    });
+                }
             }
             WriteOutputToAttachment();
             _lifecycle.Fire(new TestCaseFinishedEvent());
@@ -124,10 +137,5 @@ namespace NUnitAllureAdapter
             _log = new StringBuilder();
             _stdErr = new StringBuilder();
         }
-    }
-
-    internal class TestSuite
-    {
-        
     }
 }
