@@ -44,7 +44,11 @@ namespace NUnitAllureAdapter
         {
             if (result.IsError)
             {
-                _lifecycle.Fire(new TestCaseFailureEvent());
+                _lifecycle.Fire(new TestCaseFailureEvent
+                {
+                    Throwable = new Exception(result.Message),
+                    StackTrace = result.StackTrace
+                });
             }
             else if (result.IsFailure)
             {
