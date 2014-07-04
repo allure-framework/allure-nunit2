@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Text;
 using AllureCSharpCommons;
 using AllureCSharpCommons.Events;
+using AllureCSharpCommons.Utils;
 using log4net;
 using NUnit.Core;
 using NUnit.Framework;
@@ -44,6 +45,7 @@ namespace NUnitAllureAdapter
         {
             if (result.IsError)
             {
+                TakeScreenshot();
                 _lifecycle.Fire(new TestCaseFailureEvent
                 {
                     Throwable = new Exception(result.Message),
@@ -52,6 +54,7 @@ namespace NUnitAllureAdapter
             }
             else if (result.IsFailure)
             {
+                TakeScreenshot();
                 _lifecycle.Fire(new TestCaseFailureEvent
                 {
                     Throwable = new AssertionException(result.Message),
@@ -140,6 +143,11 @@ namespace NUnitAllureAdapter
             _trace = new StringBuilder();
             _log = new StringBuilder();
             _stdErr = new StringBuilder();
+        }
+
+        private void TakeScreenshot()
+        {
+            _lifecycle.Fire(new MakeAttachmentEvent(AllureResultsUtils.TakeScreenShot(), "Screenshot", "image/png"));
         }
     }
 }
