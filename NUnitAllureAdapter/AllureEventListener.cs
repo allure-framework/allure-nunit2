@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Linq;
+using System.IO;
 using System.Text;
 using AllureCSharpCommons;
 using AllureCSharpCommons.Events;
@@ -27,6 +28,11 @@ namespace NUnitAllureAdapter
         
         public void RunStarted(string name, int testCount)
         {
+            if (Directory.Exists(Allure.Lifecycle.ResultsPath))
+            {
+                Directory.Delete(Allure.Lifecycle.ResultsPath, true);
+            }
+            Directory.CreateDirectory(Allure.Lifecycle.ResultsPath);
         }
 
         public void RunFinished(TestResult result)
