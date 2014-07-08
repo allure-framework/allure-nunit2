@@ -31,8 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AllureCSharpCommons">
-      <HintPath>..\packages\AllureCSharpCommons.0.1.5300.18284\lib\net40\AllureCSharpCommons.dll</HintPath>
+    <Reference Include="AllureCSharpCommons, Version=0.0.1.30800, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\AllureCSharpCommons.0.0.1.30800\lib\net40\AllureCSharpCommons.dll</HintPath>
     </Reference>
     <Reference Include="nunit.core, Version=2.6.3.13283, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
