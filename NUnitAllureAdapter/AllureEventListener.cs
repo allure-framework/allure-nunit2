@@ -6,7 +6,6 @@ using System.Text;
 using AllureCSharpCommons;
 using AllureCSharpCommons.Events;
 using AllureCSharpCommons.Utils;
-using log4net;
 using NUnit.Core;
 using NUnit.Framework;
 
@@ -23,8 +22,6 @@ namespace NUnitAllureAdapter
         private StringBuilder _trace = new StringBuilder();
         private StringBuilder _log = new StringBuilder();
         private StringBuilder _stdErr = new StringBuilder();
-
-        private readonly static ILog Log = LogManager.GetLogger(typeof(AllureEventListener));
         
         public void RunStarted(string name, int testCount)
         {
