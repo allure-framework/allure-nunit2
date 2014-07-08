@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Text;
 using AllureCSharpCommons;
 using AllureCSharpCommons.Events;
@@ -22,7 +23,7 @@ namespace NUnitAllureAdapter
         private StringBuilder _log = new StringBuilder();
         private StringBuilder _stdErr = new StringBuilder();
 
-        private readonly static ILog Log = LogManager.GetLogger(typeof(Allure));
+        private readonly static ILog Log = LogManager.GetLogger(typeof(AllureEventListener));
         
         public void RunStarted(string name, int testCount)
         {
@@ -38,7 +39,22 @@ namespace NUnitAllureAdapter
 
         public void TestStarted(TestName testName)
         {
-            _lifecycle.Fire(new TestCaseStartedEvent((string) SuiteStorage[SuiteStorage.Count - 1], testName.FullName));
+            var assembly = testName.FullName.Split('.')[0];
+            var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 2];
+            
+            var evt = new TestCaseStartedEvent((string) SuiteStorage[SuiteStorage.Count - 1], testName.FullName);
+
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+            {
+                foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
+                {
+                    var methodInfo = type.GetMethod(testName.Name);
+                    var manager = new AttributeManager(methodInfo.GetCustomAttributes(false).OfType<Attribute>().ToList());
+                    manager.Update(evt);
+                }
+            }
+            
+            _lifecycle.Fire(evt);
         }
 
         public void TestFinished(TestResult result)
