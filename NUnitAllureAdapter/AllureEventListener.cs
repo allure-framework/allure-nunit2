@@ -22,14 +22,19 @@ namespace NUnitAllureAdapter
         private StringBuilder _trace = new StringBuilder();
         private StringBuilder _log = new StringBuilder();
         private StringBuilder _stdErr = new StringBuilder();
-        
+
+        static AllureEventListener()
+        {
+            Allure.ResultsPath = "AllureResults" + Path.DirectorySeparatorChar;
+        }
+
         public void RunStarted(string name, int testCount)
         {
-            if (Directory.Exists(Allure.Lifecycle.ResultsPath))
+            if (Directory.Exists(Allure.ResultsPath))
             {
-                Directory.Delete(Allure.Lifecycle.ResultsPath, true);
+                Directory.Delete(Allure.ResultsPath, true);
             }
-            Directory.CreateDirectory(Allure.Lifecycle.ResultsPath);
+            Directory.CreateDirectory(Allure.ResultsPath);
         }
 
         public void RunFinished(TestResult result)
@@ -105,10 +110,24 @@ namespace NUnitAllureAdapter
 
         public void SuiteStarted(TestName testName)
         {
+            var assembly = testName.FullName.Split('.')[0];
+            var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 1];
+
             var suiteUid = Guid.NewGuid().ToString();
+            var evt = new TestSuiteStartedEvent(suiteUid, testName.FullName);
+
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+            {
+                foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
+                {
+                    var manager = new AttributeManager(type.GetCustomAttributes(false).OfType<Attribute>().ToList());
+                    manager.Update(evt);
+                }
+            }
+            
             SuiteStorage.Add(testName.FullName, suiteUid);
 
-            _lifecycle.Fire(new TestSuiteStartedEvent(suiteUid, testName.FullName));
+            _lifecycle.Fire(evt);
         }
 
         public void SuiteFinished(TestResult result)
