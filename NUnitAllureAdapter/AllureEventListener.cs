@@ -2,6 +2,7 @@
 using System.Collections.Specialized;
 using System.Linq;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using AllureCSharpCommons;
@@ -23,10 +24,14 @@ namespace NUnitAllureAdapter
         private StringBuilder _trace = new StringBuilder();
         private StringBuilder _log = new StringBuilder();
         private StringBuilder _stdErr = new StringBuilder();
-
+        
         static AllureEventListener()
         {
-            Allure.ResultsPath = XDocument.Load("config.xml").Descendants().First().Value 
+            var codeBase = Assembly.GetExecutingAssembly().CodeBase;
+            var uri = new UriBuilder(codeBase);
+            var path = Path.GetDirectoryName(Uri.UnescapeDataString(uri.Path));
+
+            Allure.ResultsPath = XDocument.Load(path + "/config.xml").Descendants().First().Value
                 + Path.DirectorySeparatorChar;
         }
 
