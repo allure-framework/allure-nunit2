@@ -63,7 +63,11 @@ namespace NUnitAllureAdapter
             {
                 foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
                 {
-                    var methodInfo = type.GetMethod(testName.Name);
+                    var name = !testName.Name.Contains("(")
+                        ? testName.Name
+                        : testName.Name.Substring(0, testName.Name.IndexOf('('));
+
+                    var methodInfo = type.GetMethod(name);
                     var manager = new AttributeManager(methodInfo.GetCustomAttributes(false).OfType<Attribute>().ToList());
                     manager.Update(evt);
                 }
