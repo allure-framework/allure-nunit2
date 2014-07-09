@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.IO;
 using System.Text;
+using System.Xml.Linq;
 using AllureCSharpCommons;
 using AllureCSharpCommons.Events;
 using AllureCSharpCommons.Utils;
@@ -25,7 +26,8 @@ namespace NUnitAllureAdapter
 
         static AllureEventListener()
         {
-            Allure.ResultsPath = "AllureResults" + Path.DirectorySeparatorChar;
+            Allure.ResultsPath = XDocument.Load("config.xml").Descendants().First().Value 
+                + Path.DirectorySeparatorChar;
         }
 
         public void RunStarted(string name, int testCount)
