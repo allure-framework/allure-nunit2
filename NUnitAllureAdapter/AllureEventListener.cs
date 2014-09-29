@@ -31,17 +31,17 @@ namespace NUnitAllureAdapter
             var uri = new UriBuilder(codeBase);
             var path = Path.GetDirectoryName(Uri.UnescapeDataString(uri.Path));
 
-            Allure.ResultsPath = XDocument.Load(path + "/config.xml").Descendants().First().Value
+            AllureConfig.ResultsPath = XDocument.Load(path + "/config.xml").Descendants().First().Value
                 + Path.DirectorySeparatorChar;
         }
 
         public void RunStarted(string name, int testCount)
         {
-            if (Directory.Exists(Allure.ResultsPath))
+            if (Directory.Exists(AllureConfig.ResultsPath))
             {
-                Directory.Delete(Allure.ResultsPath, true);
+                Directory.Delete(AllureConfig.ResultsPath, true);
             }
-            Directory.CreateDirectory(Allure.ResultsPath);
+            Directory.CreateDirectory(AllureConfig.ResultsPath);
         }
 
         public void RunFinished(TestResult result)
