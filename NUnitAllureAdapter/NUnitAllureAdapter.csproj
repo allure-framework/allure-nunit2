@@ -31,7 +31,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AllureCSharpCommons, Version=0.1.0.27783, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="AllureCSharpCommons, Version=0.1.0.29896, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\AllureCSharpCommons.0.2.0\lib\net40\AllureCSharpCommons.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
