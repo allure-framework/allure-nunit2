@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
@@ -16,32 +16,50 @@ namespace NUnitAllureAdapter
 {
     public class AllureEventListener : EventListener
     {
-        private readonly Allure _lifecycle = Allure.Lifecycle;
+        private static readonly ILog Logger = LogManager.GetLogger(typeof (AllureEventListener));
 
-        private static readonly ILog logger = LogManager.GetLogger(typeof(AllureEventListener));
-        
         private static readonly OrderedDictionary SuiteStorage =
             new OrderedDictionary();
 
-        private StringBuilder _stdOut = new StringBuilder();
-        private StringBuilder _trace = new StringBuilder();
+        private readonly Allure _lifecycle = Allure.Lifecycle;
+
         private StringBuilder _log = new StringBuilder();
         private StringBuilder _stdErr = new StringBuilder();
-        
+        private StringBuilder _stdOut = new StringBuilder();
+        private StringBuilder _trace = new StringBuilder();
+
+        private static readonly bool TakeScreenShotOnFailedTestsFlag;
+        private static readonly bool WriteOutputToAttachmentFlag;
+
         static AllureEventListener()
         {
             try
             {
-                var codeBase = Assembly.GetExecutingAssembly().CodeBase;
+                string codeBase = Assembly.GetExecutingAssembly().CodeBase;
                 var uri = new UriBuilder(codeBase);
-                var path = Path.GetDirectoryName(Uri.UnescapeDataString(uri.Path));
+                string path = Path.GetDirectoryName(Uri.UnescapeDataString(uri.Path));
 
-                AllureConfig.ResultsPath = XDocument.Load(path + "/config.xml").Descendants().First().Value
-                    + Path.DirectorySeparatorChar;
+                AllureConfig.ResultsPath =
+                    XDocument.Load(path + "/config.xml")
+                        .Descendants()
+                        .First(x => x.Name.LocalName.Equals("results-path"))
+                        .Value;
+
+                TakeScreenShotOnFailedTestsFlag =
+                    Convert.ToBoolean(XDocument.Load(path + "/config.xml")
+                        .Descendants()
+                        .First(x => x.Name.LocalName.Equals("take-screenshots-after-failed-tests"))
+                        .Value);
+
+                WriteOutputToAttachmentFlag =
+                    Convert.ToBoolean(XDocument.Load(path + "/config.xml")
+                        .Descendants()
+                        .First(x => x.Name.LocalName.Equals("write-output-to-attachment"))
+                        .Value);
             }
             catch (Exception e)
             {
-                logger.Error(String.Format("Exception in initialization"), e);
+                Logger.Error(String.Format("Exception in initialization"), e);
             }
         }
 
@@ -57,7 +75,7 @@ namespace NUnitAllureAdapter
             }
             catch (Exception e)
             {
-                logger.Error(String.Format("Exception in RunStarted {0}", name), e);
+                Logger.Error(String.Format("Exception in RunStarted {0}", name), e);
             }
         }
 
@@ -73,20 +91,21 @@ namespace NUnitAllureAdapter
         {
             try
             {
-                var assembly = testName.FullName.Split('.')[0];
-                var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 2];
+                string assembly = testName.FullName.Split('.')[0];
+                string clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 2];
 
-                var evt = new TestCaseStartedEvent((string)SuiteStorage[SuiteStorage.Count - 1], testName.FullName);
+                var evt = new TestCaseStartedEvent((string) SuiteStorage[SuiteStorage.Count - 1], testName.FullName);
 
-                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+                foreach (
+                    Assembly asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
                 {
-                    foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
+                    foreach (Type type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
                     {
-                        var name = !testName.Name.Contains("(")
+                        string name = !testName.Name.Contains("(")
                             ? testName.Name
                             : testName.Name.Substring(0, testName.Name.IndexOf('('));
 
-                        var methodInfo = type.GetMethod(name);
+                        MethodInfo methodInfo = type.GetMethod(name);
                         if (methodInfo == null) continue;
                         var manager =
                             new AttributeManager(methodInfo.GetCustomAttributes(false).OfType<Attribute>().ToList());
@@ -98,7 +117,7 @@ namespace NUnitAllureAdapter
             }
             catch (Exception e)
             {
-                logger.Error(String.Format("Exception in TestStarted {0}", testName), e);
+                Logger.Error(String.Format("Exception in TestStarted {0}", testName), e);
             }
         }
 
@@ -108,7 +127,10 @@ namespace NUnitAllureAdapter
             {
                 if (result.IsError)
                 {
-                    TakeScreenshot();
+                    if (TakeScreenShotOnFailedTestsFlag)
+                    {
+                        TakeScreenshot(); 
+                    }
                     _lifecycle.Fire(new TestCaseFailureEvent
                     {
                         Throwable = new Exception(result.Message),
@@ -117,7 +139,10 @@ namespace NUnitAllureAdapter
                 }
                 else if (result.IsFailure)
                 {
-                    TakeScreenshot();
+                    if (TakeScreenShotOnFailedTestsFlag)
+                    {
+                        TakeScreenshot(); 
+                    }
                     _lifecycle.Fire(new TestCaseFailureEvent
                     {
                         Throwable = new AssertionException(result.Message),
@@ -148,7 +173,7 @@ namespace NUnitAllureAdapter
             }
             catch (Exception e)
             {
-                logger.Error(String.Format("Exception in TestFinished \"{0}\"", result), e);
+                Logger.Error(String.Format("Exception in TestFinished \"{0}\"", result), e);
             }
         }
 
@@ -156,15 +181,16 @@ namespace NUnitAllureAdapter
         {
             try
             {
-                var assembly = testName.FullName.Split('.')[0];
-                var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 1];
+                string assembly = testName.FullName.Split('.')[0];
+                string clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 1];
 
-                var suiteUid = Guid.NewGuid().ToString();
+                string suiteUid = Guid.NewGuid().ToString();
                 var evt = new TestSuiteStartedEvent(suiteUid, testName.FullName);
 
-                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+                foreach (
+                    Assembly asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
                 {
-                    foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
+                    foreach (Type type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
                     {
                         var manager = new AttributeManager(type.GetCustomAttributes(false).OfType<Attribute>().ToList());
                         manager.Update(evt);
@@ -177,7 +203,7 @@ namespace NUnitAllureAdapter
             }
             catch (Exception e)
             {
-                logger.Error(String.Format("Exception in SuiteStarted \"{0}\"", testName), e);
+                Logger.Error(String.Format("Exception in SuiteStarted \"{0}\"", testName), e);
             }
         }
 
@@ -185,18 +211,18 @@ namespace NUnitAllureAdapter
         {
             try
             {
-                _lifecycle.Fire(new TestSuiteFinishedEvent((string)SuiteStorage[result.FullName]));
+                _lifecycle.Fire(new TestSuiteFinishedEvent((string) SuiteStorage[result.FullName]));
                 SuiteStorage.Remove(result.FullName);
             }
             catch (Exception e)
             {
-                logger.Error(String.Format("Exception in SuiteFinished \"{0}\"", result), e);
+                Logger.Error(String.Format("Exception in SuiteFinished \"{0}\"", result), e);
             }
         }
 
         public void UnhandledException(Exception exception)
         {
-            logger.Error(String.Format("UnhandledException"), exception);
+            Logger.Error(String.Format("UnhandledException"), exception);
         }
 
         public void TestOutput(TestOutput testOutput)
@@ -220,9 +246,12 @@ namespace NUnitAllureAdapter
 
         private void WriteOutputToAttachment()
         {
+            if (!WriteOutputToAttachmentFlag) return;
+
             if (_stdOut.Length > 0)
             {
-                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_stdOut.ToString()), "StdOut", "text/plain"));
+                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_stdOut.ToString()), "StdOut",
+                    "text/plain"));
             }
             if (_trace.Length > 0)
             {
@@ -234,7 +263,8 @@ namespace NUnitAllureAdapter
             }
             if (_stdErr.Length > 0)
             {
-                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_stdErr.ToString()), "StdErr", "text/plain"));
+                _lifecycle.Fire(new MakeAttachmentEvent(Encoding.UTF8.GetBytes(_stdErr.ToString()), "StdErr",
+                    "text/plain"));
             }
             _stdOut = new StringBuilder();
             _trace = new StringBuilder();
