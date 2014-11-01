@@ -8,6 +8,7 @@ using System.Xml.Linq;
 using AllureCSharpCommons;
 using AllureCSharpCommons.Events;
 using AllureCSharpCommons.Utils;
+using log4net;
 using NUnit.Core;
 using NUnit.Framework;
 
@@ -16,6 +17,8 @@ namespace NUnitAllureAdapter
     public class AllureEventListener : EventListener
     {
         private readonly Allure _lifecycle = Allure.Lifecycle;
+
+        private static readonly ILog logger = LogManager.GetLogger(typeof(AllureEventListener));
         
         private static readonly OrderedDictionary SuiteStorage =
             new OrderedDictionary();
@@ -27,21 +30,35 @@ namespace NUnitAllureAdapter
         
         static AllureEventListener()
         {
-            var codeBase = Assembly.GetExecutingAssembly().CodeBase;
-            var uri = new UriBuilder(codeBase);
-            var path = Path.GetDirectoryName(Uri.UnescapeDataString(uri.Path));
+            try
+            {
+                var codeBase = Assembly.GetExecutingAssembly().CodeBase;
+                var uri = new UriBuilder(codeBase);
+                var path = Path.GetDirectoryName(Uri.UnescapeDataString(uri.Path));
 
-            AllureConfig.ResultsPath = XDocument.Load(path + "/config.xml").Descendants().First().Value
-                + Path.DirectorySeparatorChar;
+                AllureConfig.ResultsPath = XDocument.Load(path + "/config.xml").Descendants().First().Value
+                    + Path.DirectorySeparatorChar;
+            }
+            catch (Exception e)
+            {
+                logger.Error(String.Format("Exception in initialization"), e);
+            }
         }
 
         public void RunStarted(string name, int testCount)
         {
-            if (Directory.Exists(AllureConfig.ResultsPath))
+            try
             {
-                Directory.Delete(AllureConfig.ResultsPath, true);
+                if (Directory.Exists(AllureConfig.ResultsPath))
+                {
+                    Directory.Delete(AllureConfig.ResultsPath, true);
+                }
+                Directory.CreateDirectory(AllureConfig.ResultsPath);
             }
-            Directory.CreateDirectory(AllureConfig.ResultsPath);
+            catch (Exception e)
+            {
+                logger.Error(String.Format("Exception in RunStarted {0}", name), e);
+            }
         }
 
         public void RunFinished(TestResult result)
@@ -54,101 +71,132 @@ namespace NUnitAllureAdapter
 
         public void TestStarted(TestName testName)
         {
-            var assembly = testName.FullName.Split('.')[0];
-            var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 2];
-            
-            var evt = new TestCaseStartedEvent((string) SuiteStorage[SuiteStorage.Count - 1], testName.FullName);
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+            try
             {
-                foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
-                {
-                    var name = !testName.Name.Contains("(")
-                        ? testName.Name
-                        : testName.Name.Substring(0, testName.Name.IndexOf('('));
+                var assembly = testName.FullName.Split('.')[0];
+                var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 2];
 
-                    var methodInfo = type.GetMethod(name);
-                    var manager = new AttributeManager(methodInfo.GetCustomAttributes(false).OfType<Attribute>().ToList());
-                    manager.Update(evt);
+                var evt = new TestCaseStartedEvent((string)SuiteStorage[SuiteStorage.Count - 1], testName.FullName);
+
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+                {
+                    foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
+                    {
+                        var name = !testName.Name.Contains("(")
+                            ? testName.Name
+                            : testName.Name.Substring(0, testName.Name.IndexOf('('));
+
+                        var methodInfo = type.GetMethod(name);
+                        if (methodInfo == null) continue;
+                        var manager =
+                            new AttributeManager(methodInfo.GetCustomAttributes(false).OfType<Attribute>().ToList());
+                        manager.Update(evt);
+                    }
                 }
+
+                _lifecycle.Fire(evt);
             }
-            
-            _lifecycle.Fire(evt);
+            catch (Exception e)
+            {
+                logger.Error(String.Format("Exception in TestStarted {0}", testName), e);
+            }
         }
 
         public void TestFinished(TestResult result)
         {
-            if (result.IsError)
+            try
             {
-                TakeScreenshot();
-                _lifecycle.Fire(new TestCaseFailureEvent
+                if (result.IsError)
                 {
-                    Throwable = new Exception(result.Message),
-                    StackTrace = result.StackTrace
-                });
-            }
-            else if (result.IsFailure)
-            {
-                TakeScreenshot();
-                _lifecycle.Fire(new TestCaseFailureEvent
-                {
-                    Throwable = new AssertionException(result.Message),
-                    StackTrace = result.StackTrace
-                });
-            }
-            else if (!result.Executed)
-            {
-                if (result.ResultState == ResultState.Cancelled)
-                {
-                    _lifecycle.Fire(new TestCaseCanceledEvent
+                    TakeScreenshot();
+                    _lifecycle.Fire(new TestCaseFailureEvent
                     {
                         Throwable = new Exception(result.Message),
                         StackTrace = result.StackTrace
                     });
                 }
-                else
+                else if (result.IsFailure)
                 {
-                    _lifecycle.Fire(new TestCasePendingEvent
+                    TakeScreenshot();
+                    _lifecycle.Fire(new TestCaseFailureEvent
                     {
-                        Throwable = new Exception(result.Message),
+                        Throwable = new AssertionException(result.Message),
                         StackTrace = result.StackTrace
                     });
                 }
+                else if (!result.Executed)
+                {
+                    if (result.ResultState == ResultState.Cancelled)
+                    {
+                        _lifecycle.Fire(new TestCaseCanceledEvent
+                        {
+                            Throwable = new Exception(result.Message),
+                            StackTrace = result.StackTrace
+                        });
+                    }
+                    else
+                    {
+                        _lifecycle.Fire(new TestCasePendingEvent
+                        {
+                            Throwable = new Exception(result.Message),
+                            StackTrace = result.StackTrace
+                        });
+                    }
+                }
+                WriteOutputToAttachment();
+                _lifecycle.Fire(new TestCaseFinishedEvent());
             }
-            WriteOutputToAttachment();
-            _lifecycle.Fire(new TestCaseFinishedEvent());
+            catch (Exception e)
+            {
+                logger.Error(String.Format("Exception in TestFinished \"{0}\"", result), e);
+            }
         }
 
         public void SuiteStarted(TestName testName)
         {
-            var assembly = testName.FullName.Split('.')[0];
-            var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 1];
-
-            var suiteUid = Guid.NewGuid().ToString();
-            var evt = new TestSuiteStartedEvent(suiteUid, testName.FullName);
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+            try
             {
-                foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
-                {
-                    var manager = new AttributeManager(type.GetCustomAttributes(false).OfType<Attribute>().ToList());
-                    manager.Update(evt);
-                }
-            }
-            
-            SuiteStorage.Add(testName.FullName, suiteUid);
+                var assembly = testName.FullName.Split('.')[0];
+                var clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 1];
 
-            _lifecycle.Fire(evt);
+                var suiteUid = Guid.NewGuid().ToString();
+                var evt = new TestSuiteStartedEvent(suiteUid, testName.FullName);
+
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
+                {
+                    foreach (var type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
+                    {
+                        var manager = new AttributeManager(type.GetCustomAttributes(false).OfType<Attribute>().ToList());
+                        manager.Update(evt);
+                    }
+                }
+
+                SuiteStorage.Add(testName.FullName, suiteUid);
+
+                _lifecycle.Fire(evt);
+            }
+            catch (Exception e)
+            {
+                logger.Error(String.Format("Exception in SuiteStarted \"{0}\"", testName), e);
+            }
         }
 
         public void SuiteFinished(TestResult result)
         {
-            _lifecycle.Fire(new TestSuiteFinishedEvent((string) SuiteStorage[result.FullName]));
-            SuiteStorage.Remove(result.FullName);
+            try
+            {
+                _lifecycle.Fire(new TestSuiteFinishedEvent((string)SuiteStorage[result.FullName]));
+                SuiteStorage.Remove(result.FullName);
+            }
+            catch (Exception e)
+            {
+                logger.Error(String.Format("Exception in SuiteFinished \"{0}\"", result), e);
+            }
         }
 
         public void UnhandledException(Exception exception)
         {
+            logger.Error(String.Format("UnhandledException"), exception);
         }
 
         public void TestOutput(TestOutput testOutput)
