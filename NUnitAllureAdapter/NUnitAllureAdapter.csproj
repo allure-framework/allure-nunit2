@@ -55,6 +55,7 @@
   <ItemGroup>
     <Compile Include="AllureAdapter.cs" />
     <Compile Include="AllureEventListener.cs" />
+    <Compile Include="EventListenerAdapter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

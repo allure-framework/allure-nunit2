@@ -14,12 +14,15 @@ using NUnit.Framework;
 
 namespace NUnitAllureAdapter
 {
-    public class AllureEventListener : EventListener
+    public class AllureEventListener : EventListenerAdapter
     {
         private static readonly ILog Logger = LogManager.GetLogger(typeof (AllureEventListener));
 
         private static readonly OrderedDictionary SuiteStorage =
             new OrderedDictionary();
+
+        private static readonly bool WriteOutputToAttachmentFlag;
+        private static readonly bool TakeScreenShotOnFailedTestsFlag;
 
         private readonly Allure _lifecycle = Allure.Lifecycle;
 
@@ -27,9 +30,6 @@ namespace NUnitAllureAdapter
         private StringBuilder _stdErr = new StringBuilder();
         private StringBuilder _stdOut = new StringBuilder();
         private StringBuilder _trace = new StringBuilder();
-
-        private static readonly bool TakeScreenShotOnFailedTestsFlag;
-        private static readonly bool WriteOutputToAttachmentFlag;
 
         static AllureEventListener()
         {
@@ -43,7 +43,7 @@ namespace NUnitAllureAdapter
                     XDocument.Load(path + "/config.xml")
                         .Descendants()
                         .First(x => x.Name.LocalName.Equals("results-path"))
-                        .Value;
+                        .Value + "/";
 
                 TakeScreenShotOnFailedTestsFlag =
                     Convert.ToBoolean(XDocument.Load(path + "/config.xml")
@@ -56,6 +56,12 @@ namespace NUnitAllureAdapter
                         .Descendants()
                         .First(x => x.Name.LocalName.Equals("write-output-to-attachment"))
                         .Value);
+
+                Logger.Error("Initialization completed successfully.\n");
+                Logger.Error(
+                    String.Format(
+                        "Results Path: {0};\n WriteOutputToAttachmentFlag: {1};\n TakeScreenShotOnFailedTestsFlag: {2}",
+                        AllureConfig.ResultsPath, WriteOutputToAttachmentFlag, TakeScreenShotOnFailedTestsFlag));
             }
             catch (Exception e)
             {
@@ -63,7 +69,7 @@ namespace NUnitAllureAdapter
             }
         }
 
-        public void RunStarted(string name, int testCount)
+        public override void RunStarted(string name, int testCount)
         {
             try
             {
@@ -79,15 +85,7 @@ namespace NUnitAllureAdapter
             }
         }
 
-        public void RunFinished(TestResult result)
-        {
-        }
-
-        public void RunFinished(Exception exception)
-        {
-        }
-
-        public void TestStarted(TestName testName)
+        public override void TestStarted(TestName testName)
         {
             try
             {
@@ -121,7 +119,7 @@ namespace NUnitAllureAdapter
             }
         }
 
-        public void TestFinished(TestResult result)
+        public override void TestFinished(TestResult result)
         {
             try
             {
@@ -129,7 +127,7 @@ namespace NUnitAllureAdapter
                 {
                     if (TakeScreenShotOnFailedTestsFlag)
                     {
-                        TakeScreenshot(); 
+                        TakeScreenshot();
                     }
                     _lifecycle.Fire(new TestCaseFailureEvent
                     {
@@ -141,7 +139,7 @@ namespace NUnitAllureAdapter
                 {
                     if (TakeScreenShotOnFailedTestsFlag)
                     {
-                        TakeScreenshot(); 
+                        TakeScreenshot();
                     }
                     _lifecycle.Fire(new TestCaseFailureEvent
                     {
@@ -177,7 +175,7 @@ namespace NUnitAllureAdapter
             }
         }
 
-        public void SuiteStarted(TestName testName)
+        public override void SuiteStarted(TestName testName)
         {
             try
             {
@@ -207,7 +205,7 @@ namespace NUnitAllureAdapter
             }
         }
 
-        public void SuiteFinished(TestResult result)
+        public override void SuiteFinished(TestResult result)
         {
             try
             {
@@ -220,12 +218,7 @@ namespace NUnitAllureAdapter
             }
         }
 
-        public void UnhandledException(Exception exception)
-        {
-            Logger.Error(String.Format("UnhandledException"), exception);
-        }
-
-        public void TestOutput(TestOutput testOutput)
+        public override void TestOutput(TestOutput testOutput)
         {
             switch (testOutput.Type)
             {
