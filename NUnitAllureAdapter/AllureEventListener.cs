@@ -62,17 +62,7 @@ namespace NUnitAllureAdapter
                     String.Format(
                         "Results Path: {0};\n WriteOutputToAttachmentFlag: {1};\n TakeScreenShotOnFailedTestsFlag: {2}",
                         AllureConfig.ResultsPath, WriteOutputToAttachmentFlag, TakeScreenShotOnFailedTestsFlag));
-            }
-            catch (Exception e)
-            {
-                Logger.Error(String.Format("Exception in initialization"), e);
-            }
-        }
 
-        public override void RunStarted(string name, int testCount)
-        {
-            try
-            {
                 if (Directory.Exists(AllureConfig.ResultsPath))
                 {
                     Directory.Delete(AllureConfig.ResultsPath, true);
@@ -81,7 +71,7 @@ namespace NUnitAllureAdapter
             }
             catch (Exception e)
             {
-                Logger.Error(String.Format("Exception in RunStarted {0}", name), e);
+                Logger.Error(String.Format("Exception in initialization"), e);
             }
         }
 
