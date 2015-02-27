@@ -15,4 +15,5 @@
 This adapter only generates XML files containing information about tests. See [wiki section](https://github.com/allure-framework/allure-core/wiki#generating-report) on how to generate report.
 
 ## Further reading
+ * [Article](http://ilya-murzinov.github.io/articles/allure-csharp/) about configuring adapter
  * [Allure NUnit Wiki](https://github.com/allure-framework/allure-csharp-commons/wiki)
