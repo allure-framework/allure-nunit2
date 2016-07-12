@@ -80,7 +80,7 @@ namespace NUnitAllureAdapter
             try
             {
                 string assembly = testName.FullName.Split('.')[0];
-                string clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 2];
+                string clazz = testName.FullName.Split('(')[0].Split('.')[testName.FullName.Split('(')[0].Split('.').Count() - 2];
 
                 var evt = new TestCaseStartedEvent((string) SuiteStorage[SuiteStorage.Count - 1], testName.FullName);
 
