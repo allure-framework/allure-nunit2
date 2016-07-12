@@ -182,12 +182,15 @@ namespace NUnitAllureAdapter
                     {
                         var manager = new AttributeManager(type.GetCustomAttributes(false).OfType<Attribute>().ToList());
                         manager.Update(evt);
+
+                        SuiteStorage.Add(testName.FullName, suiteUid);
+
+                        _lifecycle.Fire(evt);
+
+                        return;
                     }
                 }
 
-                SuiteStorage.Add(testName.FullName, suiteUid);
-
-                _lifecycle.Fire(evt);
             }
             catch (Exception e)
             {
