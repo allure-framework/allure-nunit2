@@ -80,7 +80,7 @@ namespace NUnitAllureAdapter
             try
             {
                 string assembly = testName.FullName.Split('.')[0];
-                string clazz = testName.FullName.Split('.')[testName.FullName.Split('.').Count() - 2];
+                string clazz = testName.FullName.Split('(')[0].Split('.')[testName.FullName.Split('(')[0].Split('.').Count() - 2];
 
                 var evt = new TestCaseStartedEvent((string) SuiteStorage[SuiteStorage.Count - 1], testName.FullName);
 
@@ -182,12 +182,15 @@ namespace NUnitAllureAdapter
                     {
                         var manager = new AttributeManager(type.GetCustomAttributes(false).OfType<Attribute>().ToList());
                         manager.Update(evt);
+
+                        SuiteStorage.Add(testName.FullName, suiteUid);
+
+                        _lifecycle.Fire(evt);
+
+                        return;
                     }
                 }
 
-                SuiteStorage.Add(testName.FullName, suiteUid);
-
-                _lifecycle.Fire(evt);
             }
             catch (Exception e)
             {
