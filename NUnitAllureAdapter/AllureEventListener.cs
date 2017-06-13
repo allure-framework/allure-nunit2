@@ -178,7 +178,7 @@ namespace NUnitAllureAdapter
                 foreach (
                     Assembly asm in AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.Contains(assembly)))
                 {
-                    foreach (Type type in asm.GetTypes().Where(x => x.Name.Contains(clazz)))
+                    foreach (Type type in asm.GetTypes().Where(x => x.Name.Equals(clazz)))
                     {
                         var manager = new AttributeManager(type.GetCustomAttributes(false).OfType<Attribute>().ToList());
                         manager.Update(evt);
