@@ -156,6 +156,7 @@ namespace NUnitAllureAdapter
                         });
                     }
                 }
+                AddAttachments(result);
                 WriteOutputToAttachment();
                 _lifecycle.Fire(new TestCaseFinishedEvent());
             }
@@ -261,6 +262,30 @@ namespace NUnitAllureAdapter
         private void TakeScreenshot()
         {
             _lifecycle.Fire(new MakeAttachmentEvent(AllureResultsUtils.TakeScreenShot(), "Screenshot", "image/png"));
+        }
+
+        private void AddAttachments(TestResult result)
+        {
+            if (result.Test.Properties.Contains("AllureAttachment"))
+            {
+                try
+                {
+                    string param = result.Test.Properties["AllureAttachment"] as string;
+                    string[] pathes = param.Split(',');
+                    foreach (string path in pathes)
+                    {
+                        FileInfo file = new FileInfo(path);
+                        _lifecycle.Fire(new MakeAttachmentEvent(
+                            File.ReadAllBytes(path), file.Name, MimeTypes.ToMime(file.Extension)));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _stdErr.Append(string.Format("Exception type: \"{0}\". Message: \"{1}\".", ex.GetType(), ex.Message));
+                    if (ex.InnerException != null)
+                        _stdErr.Append(string.Format("\tInnerExceptionType: \"{0}\". InnerExceptionMessage: \"{1}\".", ex.InnerException.GetType(), ex.InnerException.Message));
+                }
+            }
         }
     }
 }
