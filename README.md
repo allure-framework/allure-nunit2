@@ -1,3 +1,6 @@
+# [DEPRECATED]
+## Please follow https://github.com/allure-framework/allure-csharp
+
 # Allure NUnit 2 Adapter
 
 ## Installation and Usage
